@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Incognito Riddle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&display=swap');
+
+body {
+  margin: 0;
+  background: black;
+  color: white;
+  font-family: 'Space Mono', monospace;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  overflow: hidden;
+  position: relative;
+}
+
+#overlay {
+  position: fixed;
+  top:0; left:0;
+  width:100%;
+  height:100%;
+  background:white;
+  z-index:100;
+  opacity:0;
+  pointer-events:none;
+  transition: opacity 2.5s ease;
+}
+
+/* Subtle background flicker for ambient light effect */
+#backgroundFlicker {
+  position: fixed;
+  top:0; left:0;
+  width:100%;
+  height:100%;
+  background:black;
+  z-index:0;
+  opacity:0.05;
+  pointer-events:none;
+  animation: ambientFlicker 3s infinite alternate;
+}
+
+@keyframes ambientFlicker {
+  0% { opacity: 0.02; }
+  50% { opacity: 0.05; }
+  100% { opacity: 0.03; }
+}
+
+.riddle {
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  line-height: 1.5;
+  max-width: 700px;
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 2;
+  word-break: break-word;
+}
+
+input {
+  padding: 1rem 1.5rem;
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  border: 2px solid white;
+  background: black;
+  color: white;
+  outline: none;
+  font-family: 'Space Mono', monospace;
+  width: 80%;
+  max-width: 350px;
+  text-align: center;
+  z-index: 2;
+  position: relative;
+}
+
+input:focus { border-color: white; }
+
+.reveal-container {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.reveal {
+  font-size: clamp(2rem, 10vw, 6rem);
+  text-transform: uppercase;
+  color: white;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.reveal-small {
+  font-size: clamp(1rem, 4vw, 2rem);
+  margin-top: 0.5rem;
+  position: relative;
+  display: inline-block;
+  color: white;
+  font-family: 'Space Mono', monospace;
+  z-index: 2;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+/* Text glitch */
+.reveal::before,
+.reveal::after,
+.reveal-small::before,
+.reveal-small::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%;
+  overflow: hidden;
+  color: white;
+}
+
+.reveal::before, .reveal-small::before {
+  clip-path: inset(0 0 50% 0);
+  animation: glitchTop 1s infinite;
+}
+
+.reveal::after, .reveal-small::after {
+  clip-path: inset(50% 0 0 0);
+  animation: glitchBottom 1.2s infinite;
+}
+
+@keyframes glitchTop {
+  0% { transform: translateX(0); } 10% { transform: translateX(-2px); } 20% { transform: translateX(1px); }
+  30% { transform: translateX(-1px); } 40% { transform: translateX(2px); } 50% { transform: translateX(-2px); }
+  60% { transform: translateX(1px); } 70% { transform: translateX(0); } 80% { transform: translateX(-1px); }
+  90% { transform: translateX(2px); } 100% { transform: translateX(0); }
+}
+
+@keyframes glitchBottom {
+  0% { transform: translateX(0); } 10% { transform: translateX(1px); } 20% { transform: translateX(-2px); }
+  30% { transform: translateX(2px); } 40% { transform: translateX(-1px); } 50% { transform: translateX(1px); }
+  60% { transform: translateX(-2px); } 70% { transform: translateX(0); } 80% { transform: translateX(2px); }
+  90% { transform: translateX(-1px); } 100% { transform: translateX(0); }
+}
+
+/* SVG flicker */
+.svgFlicker {
+  position: absolute;
+  width: 40px;
+  height: auto;
+  fill: #fff;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+@media (max-width: 500px) {
+  .riddle { font-size: 6vw; }
+  input { font-size: 5vw; }
+  .reveal { font-size: 14vw; }
+  .reveal-small { font-size: 5vw; }
+  .svgFlicker { width: 30px; }
+}
+</style>
+</head>
+<body>
+
+<div id="overlay"></div>
+<div id="backgroundFlicker"></div>
+
+<div id="content">
+  <div class="riddle" id="riddleText">
+    Where you’re “in,”<br>
+    but still “not known,”<br>
+    combine the clues<br>
+    and I am shown.<br><br>
+    <strong>Where am I?</strong>
+  </div>
+
+  <input id="answer" placeholder="Type your answer…" oninput="checkAnswer()">
+</div>
+
+<div class="reveal-container" id="revealContainer">
+  <div class="reveal" id="revealMessage" data-text="WELCOME TO INCOGNITO">WELCOME TO INCOGNITO</div>
+  <div class="reveal-small" id="revealSmall" data-text="Please feel free to take a membership card :)">Please feel free to take a membership card :)</div>
+</div>
+
+<script>
+const overlay = document.getElementById('overlay');
+const riddle = document.getElementById('riddleText');
+const input = document.getElementById('answer');
+const revealContainer = document.getElementById('revealContainer');
+const revealText = document.getElementById('revealMessage');
+const revealSmall = document.getElementById('revealSmall');
+
+const flickerPattern = [0, 150];
+const fullVisibleDuration = 1200;
+const fadeDuration = 500;
+let svgActive = false;
+
+function checkAnswer() {
+  if (input.value.trim().toLowerCase() === 'incognito') {
+    riddle.style.display = 'none';
+    input.style.display = 'none';
+
+    overlay.style.opacity = '1';
+
+    setTimeout(() => {
+      overlay.style.transition = 'opacity 1s ease';
+      overlay.style.opacity = '0';
+
+      revealContainer.style.display = 'flex';
+
+      setTimeout(() => { startFlickerLoop(); }, 500);
+    }, 2500);
+  }
+}
+
+function getRandomPosition(svg) {
+  const { innerWidth: W, innerHeight: H } = window;
+  const sw = svg.clientWidth;
+  const sh = svg.clientHeight;
+  const textBounds = revealContainer.getBoundingClientRect();
+  const padding = 20;
+
+  let x, y, attempts = 0;
+  do {
+    x = Math.random() * (W - sw);
+    y = Math.random() * (H - sh);
+    attempts++;
+  } while (
+    x + sw > textBounds.left - padding &&
+    x < textBounds.right + padding &&
+    y + sh > textBounds.top - padding &&
+    y < textBounds.bottom + padding &&
+    attempts < 100
+  );
+  return {x, y};
+}
+
+function createSVG() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 152.5 515.33');
+  svg.classList.add('svgFlicker');
+
+  const ellipse = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+  ellipse.setAttribute('cx','76.25');
+  ellipse.setAttribute('cy','75.31');
+  ellipse.setAttribute('rx','76.25');
+  ellipse.setAttribute('ry','75.31');
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d','M0,515.33V243.53c2.78-39.5,36.4-70.45,76.25-70.47 39.49-.02,72.95,30.34,76.25,69.44v272.84');
+
+  svg.appendChild(ellipse);
+  svg.appendChild(path);
+  document.body.appendChild(svg);
+
+  return svg;
+}
+
+function flickerSVG(svg) {
+  svgActive = true;
+  const pos = getRandomPosition(svg);
+  svg.style.left = pos.x + 'px';
+  svg.style.top = pos.y + 'px';
+
+  flickerPattern.forEach(time => {
+    setTimeout(() => { svg.style.opacity = 0.3; setTimeout(() => { svg.style.opacity = 1; }, 50); }, time);
+  });
+
+  setTimeout(() => { svg.style.opacity = 1; }, flickerPattern[flickerPattern.length-1]+200);
+
+  setTimeout(() => { 
+    svg.style.transition = `opacity ${fadeDuration}ms ease`;
+    svg.style.opacity = 0;
+  }, flickerPattern[flickerPattern.length-1]+200+fullVisibleDuration);
+
+  setTimeout(() => { svg.remove(); svgActive = false; }, flickerPattern[flickerPattern.length-1]+200+fullVisibleDuration+fadeDuration);
+}
+
+function startFlickerLoop() {
+  function spawnFlicker() {
+    if (!svgActive) { flickerSVG(createSVG()); }
+    const delay = 500 + Math.random() * 1500;
+    setTimeout(spawnFlicker, delay);
+  }
+  spawnFlicker();
+}
+</script>
+
+</body>
+</html>
